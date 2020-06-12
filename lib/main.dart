@@ -1,8 +1,11 @@
 import 'dart:math';
+import 'dart:io';
 
 import 'package:expenses/components/chart.dart';
 import 'package:expenses/components/transaction_form.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'components/trasaction_list.dart';
 import 'models/transaction.dart';
@@ -12,6 +15,7 @@ main() => runApp(ExpensesApp());
 class ExpensesApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     return MaterialApp(
       home: MyHomePage(),
       theme: ThemeData(
@@ -46,7 +50,38 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  final List<Transaction> _transactions = [];
+  final List<Transaction> _transactions = [
+    // Transaction(
+    //   id: "t0",
+    //   title: "Conta Antida",
+    //   value: 400,
+    //   date: DateTime.now().subtract(Duration(days: 30)),
+    // ),
+    // Transaction(
+    //   id: "t1",
+    //   title: "Novo tênis de corrida",
+    //   value: 200.46,
+    //   date: DateTime.now().subtract(Duration(days: 2)),
+    // ),
+    // Transaction(
+    //   id: "t2",
+    //   title: "Carderno 50 folhas",
+    //   value: 42.99,
+    //   date: DateTime.now().subtract(Duration(days: 4)),
+    // ),
+    // Transaction(
+    //   id: "t3",
+    //   title: "Carderno 50 folhas",
+    //   value: 42.99,
+    //   date: DateTime.now().subtract(Duration(days: 4)),
+    // ),
+    // Transaction(
+    //   id: "t4",
+    //   title: "Carderno 50 folhas",
+    //   value: 42.99,
+    //   date: DateTime.now().subtract(Duration(days: 4)),
+    // ),
+  ];
 
   List<Transaction> get _recentTransactions {
     return _transactions
@@ -81,43 +116,88 @@ class _MyHomePageState extends State<MyHomePage> {
     Navigator.of(context).pop();
   }
 
-  _removeTransaction(String id){
+  _removeTransaction(String id) {
     setState(() {
       _transactions.removeWhere((tr) => tr.id == id);
     });
   }
 
+  Widget getIconButton(IconData icon, Function fn) {
+    return Platform.isIOS
+        ? GestureDetector(onTap: fn, child: Icon(icon))
+        : IconButton(icon: Icon(icon), onPressed: fn);
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Despesas pessoais',
-        ),
-        actions: <Widget>[
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () => _openTransactionFormModal(context),
+    final actions = <Widget>[
+      getIconButton(
+        Platform.isIOS ? CupertinoIcons.add : Icons.add,
+        () => _openTransactionFormModal(context),
+      )
+    ];
+
+    final PreferredSizeWidget appBar = Platform.isIOS
+        ? CupertinoNavigationBar(
+            middle: Text('Despesas Pessoais'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: actions,
+            ),
           )
-        ],
-      ),
-      body: SingleChildScrollView(
+        : AppBar(
+            title: Text(
+              'Despesas pessoais',
+              style: TextStyle(
+                  fontSize: 20 *
+                      MediaQuery.of(context)
+                          .textScaleFactor // Customize size font, following configuration user in phone config (size fonts)
+                  ),
+            ),
+            actions: actions);
+
+    //get size device for responsive screen
+    final avaliableHeight = MediaQuery.of(context).size.height -
+        appBar.preferredSize.height -
+        MediaQuery.of(context).padding.top;
+
+    final bodyPage = SafeArea(
+      child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
-            Container(child: Chart(_recentTransactions)),
-            TransactionList(_transactions, _removeTransaction),
+            Container(
+              height: avaliableHeight * 0.30,
+              child: Chart(_recentTransactions),
+            ),
+            Container(
+              height: avaliableHeight * 0.70,
+              child: TransactionList(_transactions, _removeTransaction),
+            ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => {},
-        child: IconButton(
-          onPressed: () => _openTransactionFormModal(context),
-          icon: Icon(Icons.add),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
+
+    return Platform.isIOS
+        ? CupertinoPageScaffold(
+            navigationBar: appBar,
+            child: bodyPage,
+          )
+        : Scaffold(
+            appBar: appBar,
+            body: bodyPage,
+            floatingActionButton: Platform.isIOS
+                ? Container()
+                : FloatingActionButton(
+                    onPressed: () => {},
+                    child: IconButton(
+                      onPressed: () => _openTransactionFormModal(context),
+                      icon: Icon(Icons.add),
+                    ),
+                  ),
+            floatingActionButtonLocation:
+                FloatingActionButtonLocation.centerFloat,
+          );
   }
 }
